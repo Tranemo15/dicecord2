@@ -204,7 +204,50 @@ const io = new Server(server, {
     }
 });
 
+app.set('io', io); // Attach io to app for use in routes
+
 socketHandler(io);
+
+// Get Messages Route (Updated to include is_pinned)
+app.get('/api/messages', async (req, res) => {
+    try {
+        const sql = `
+            SELECT messages.*, users.avatar_url, users.banner_url 
+            FROM messages 
+            LEFT JOIN users ON messages.user_id = users.id 
+            ORDER BY messages.created_at DESC 
+            LIMIT 1000000000000000
+        `;
+        const rows = await db.query(sql);
+        res.json(rows.reverse());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Toggle Pin Route
+app.post('/api/messages/:id/pin', async (req, res) => {
+    const { id } = req.params;
+    try {
+        // 1. Get current status
+        const rows = await db.query('SELECT is_pinned FROM messages WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Message not found' });
+
+        const currentStatus = rows[0].is_pinned;
+        const newStatus = currentStatus ? 0 : 1;
+
+        // 2. Update DB
+        await db.query('UPDATE messages SET is_pinned = ? WHERE id = ?', [newStatus, id]);
+
+        // 3. Emit event
+        const io = req.app.get('io');
+        io.emit('messageUpdated', { id: parseInt(id), is_pinned: newStatus });
+
+        res.json({ id, is_pinned: newStatus });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 const PORT = process.env.PORT || 3000;
 

@@ -100,6 +100,13 @@ class Database {
         )
       `);
 
+      // Add is_pinned column if it doesn't exist
+      try {
+        await this.query('ALTER TABLE messages ADD COLUMN is_pinned INTEGER DEFAULT 0');
+      } catch (err) {
+        // Ignore if column already exists
+      }
+
       console.log('Database tables initialized.');
     } catch (err) {
       console.error('Failed to init DB tables:', err);
