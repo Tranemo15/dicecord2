@@ -227,18 +227,52 @@ app.set('io', io); // Attach io to app for use in routes
 
 socketHandler(io);
 
-// Get Messages Route (Updated to include is_pinned)
+// Get Messages Route (Updated for Channels)
 app.get('/api/messages', async (req, res) => {
     try {
+        const channelId = req.query.channelId || 1;
         const sql = `
             SELECT messages.*, users.avatar_url, users.banner_url 
             FROM messages 
             LEFT JOIN users ON messages.user_id = users.id 
+            WHERE messages.channel_id = ?
             ORDER BY messages.created_at DESC 
             LIMIT 1000000000000000
         `;
-        const rows = await db.query(sql);
+        const rows = await db.query(sql, [channelId]);
         res.json(rows.reverse());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Channels Routes
+app.get('/api/channels', async (req, res) => {
+    try {
+        const rows = await db.query('SELECT * FROM channels ORDER BY created_at ASC');
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/channels', verifyToken, async (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name required' });
+
+    // Simple validation: alphanumeric + dashes
+    const safeName = name.toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+    try {
+        const result = await db.query('INSERT INTO channels (name) VALUES (?)', [safeName]);
+        // result might differ based on DB adapter, fetching back for consistency
+        const rows = await db.query('SELECT * FROM channels WHERE name = ?', [safeName]);
+
+        // Emit event to all clients to update channel list
+        const io = req.app.get('io');
+        io.emit('channelCreated', rows[0]);
+
+        res.json(rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -107,6 +107,29 @@ class Database {
         // Ignore if column already exists
       }
 
+      // Channels table
+      await this.query(`
+        CREATE TABLE IF NOT EXISTS channels (
+          id ${idType},
+          name TEXT UNIQUE,
+          type TEXT DEFAULT 'text',
+          created_at ${timestamp}
+        )
+      `);
+
+      // Add default channel
+      await this.query(`INSERT OR IGNORE INTO channels (id, name) VALUES (1, 'general')`);
+
+      // Add channel_id to messages
+      try {
+        await this.query('ALTER TABLE messages ADD COLUMN channel_id INTEGER DEFAULT 1');
+      } catch (err) {
+        // Ignore
+      }
+
+      // Ensure old messages have channel_id = 1
+      await this.query('UPDATE messages SET channel_id = 1 WHERE channel_id IS NULL');
+
       console.log('Database tables initialized.');
     } catch (err) {
       console.error('Failed to init DB tables:', err);
