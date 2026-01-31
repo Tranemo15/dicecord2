@@ -90,7 +90,7 @@ app.get('/api/messages', async (req, res) => {
             FROM messages 
             LEFT JOIN users ON messages.user_id = users.id 
             ORDER BY messages.created_at DESC 
-            LIMIT 2
+            LIMIT 1000000000000000
         `;
         const rows = await db.query(sql);
         res.json(rows.reverse());
