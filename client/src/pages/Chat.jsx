@@ -301,7 +301,16 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
 
     const formatToCET = (dateStr, type) => {
         if (!dateStr) return '';
-        const date = new Date(dateStr);
+
+        // Fix for SQL timestamps (e.g. "2023-01-01 12:00:00") which lack 'Z'
+        // We assume database stores UTC. If we don't add 'Z', browser interprets as Local Time,
+        // causing a shift (often -1h) compared to the Socket messages which are explicitly UTC.
+        let safeDateStr = dateStr;
+        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('T')) {
+            safeDateStr = dateStr.replace(' ', 'T') + 'Z';
+        }
+
+        const date = new Date(safeDateStr);
 
         // Force CET (Central European Time)
         // Note: 'CET' might not be supported in all environments, 'Europe/Paris' or 'Europe/Berlin' is safer.
