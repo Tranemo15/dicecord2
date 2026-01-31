@@ -242,6 +242,195 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     // Filter messages for rendering (client-side specific safety)
     const displayedMessages = messages.filter(m => m.channel_id === (activeChannel?.id || 1));
 
+
+
+
+
+    const handleDeleteMessage = async (messageId) => {
+        if (!confirm('Are you sure you want to delete this message?')) return;
+        try {
+            await axios.delete(`${API_URL}/api/messages/${messageId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (err) {
+            console.error("Failed to delete message", err);
+            alert("Failed to delete message: " + (err.response?.data?.error || err.message));
+        }
+    };
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    // Handle outside click for emoji picker
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+                setShowEmojiPicker(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleInputChange = (e) => {
+        const val = e.target.value;
+        setInputValue(val);
+
+        // Autocomplete logic
+        const lastWord = val.split(' ').pop();
+        if (lastWord.startsWith(':') && lastWord.length > 1) {
+            const query = lastWord.slice(1).toLowerCase();
+
+            // 1. Search Custom Emojis
+            const customMatches = emojis
+                .filter(e => e.name.toLowerCase().includes(query))
+                .map(e => ({ type: 'custom', ...e }));
+
+            // 2. Search Standard Emojis
+            const standardMatches = [];
+            if (emojiMap) {
+                Object.keys(emojiMap).forEach(name => {
+                    if (name.includes(query)) {
+                        standardMatches.push({ type: 'standard', name: name, char: emojiMap[name] });
+                    }
+                });
+            }
+
+            // Merge and Limit
+            const allMatches = [...customMatches, ...standardMatches].slice(0, 5); // Limit to 5 for UI
+
+            setAutocompleteList(allMatches);
+            setAutocompleteIndex(0);
+        } else {
+            setAutocompleteList([]);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (autocompleteList.length > 0) {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setAutocompleteIndex(prev => Math.max(0, prev - 1));
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setAutocompleteIndex(prev => Math.min(autocompleteList.length - 1, prev + 1));
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                selectAutocomplete(autocompleteList[autocompleteIndex]);
+            } else if (e.key === 'Escape') {
+                setAutocompleteList([]);
+            }
+        }
+    };
+
+    const selectAutocomplete = (emoji) => {
+        const words = inputValue.split(' ');
+        words.pop();
+
+        let suffix = '';
+        if (emoji.type === 'custom') {
+            suffix = `:${emoji.name}: `;
+        } else {
+            suffix = `${emoji.char} `; // Insert actual char for standard
+        }
+
+        const newValue = words.join(' ') + (words.length > 0 ? ' ' : '') + suffix;
+        setInputValue(newValue);
+        setAutocompleteList([]);
+    };
+
+    const insertEmoji = (emoji) => {
+        if (emoji.char) {
+            setInputValue(prev => prev + emoji.char);
+        } else {
+            setInputValue(prev => prev + `:${emoji.name}: `);
+        }
+        setShowEmojiPicker(false);
+    };
+
+    const renderMessageContent = (content) => {
+        // Regex for :emoji_name: is :[a-zA-Z0-9_]+:
+        const emojiRegex = /:([a-zA-Z0-9_]+):/g;
+
+        // Remove whitespace and check if strict match (for Jumbo)
+        const isJumbo = content.replace(/\s/g, '').replace(emojiRegex, '') === '';
+
+        const parts = content.split(emojiRegex);
+
+        if (parts.length === 1) return content;
+
+        return (
+            <span className={isJumbo ? 'jumbomoji-container' : ''}>
+                {parts.map((part, i) => {
+                    if (i % 2 === 1) {
+                        const emojiName = part;
+                        const emoji = emojis.find(e => e.name === emojiName);
+                        if (emoji) {
+                            return (
+                                <img
+                                    key={i}
+                                    src={`${API_URL}${emoji.url}`}
+                                    alt={`:${emojiName}:`}
+                                    className={`emoji ${isJumbo ? 'jumbo' : ''}`}
+                                    onClick={() => setLightboxImage(emoji)}
+                                    title={`:${emojiName}:`}
+                                />
+                            );
+                        } else {
+                            return `:${emojiName}:`;
+                        }
+                    } else {
+                        return part;
+                    }
+                })}
+            </span>
+        );
+    };
+
+
+
+    // Calculate Offline Users
+    const offlineUsers = allUsers.filter(u => !onlineUsers.some(ou => ou.id === u.id));
+
+    const formatToCET = (dateStr, type) => {
+        if (!dateStr) return '';
+
+        // Fix for SQL timestamps (e.g. "2023-01-01 12:00:00") which lack 'Z'
+        // We assume database stores UTC. If we don't add 'Z', browser interprets as Local Time,
+        // causing a shift (often -1h) compared to the Socket messages which are explicitly UTC.
+        let safeDateStr = dateStr;
+        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('T')) {
+            safeDateStr = dateStr.replace(' ', 'T') + 'Z';
+        }
+
+        const date = new Date(safeDateStr);
+
+        // Force CET (Central European Time)
+        // Note: 'CET' might not be supported in all environments, 'Europe/Paris' or 'Europe/Berlin' is safer.
+        const options = {
+            timeZone: 'Europe/Paris', // CET/CEST
+            hour12: false, // 24-hour clock
+        };
+
+        if (type === 'time') {
+            return new Intl.DateTimeFormat('en-GB', {
+                ...options,
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        } else {
+            return new Intl.DateTimeFormat('en-GB', {
+                ...options,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        }
+    };
+
     return (
         <div className="app-container">
             {/* Sidebar code... */}
@@ -284,482 +473,272 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                             />
                         </form>
                     )}
+                </div>        </div>
+            <div className="user-profile">
+                {/* ... */}
+                <div className="user-info">
+                    <div className="avatar-upload-wrapper" title="User Settings" onClick={() => setIsSettingsOpen(true)}>
+                        <Avatar username={username} avatarUrl={avatarUrl || null} />
+                        <div className="avatar-overlay">
+                            <Settings size={16} />
+                        </div>
+                    </div>
+                    <div className="username-tag">
+                        <span className="username">{username}</span>
+                    </div>
                 </div>
-                {/* ... User profile ... */}
-    };
+                <div className="profile-controls">
+                    <button className="icon-btn" onClick={() => setIsSettingsOpen(true)} title="User Settings">
+                        <Settings size={18} />
+                    </button>
+                    <button className="icon-btn" onClick={logout} title="Logout">
+                        <LogOut size={18} />
+                    </button>
+                </div>
+            </div>
 
-    const handleDeleteMessage = async (messageId) => {
-        if (!confirm('Are you sure you want to delete this message?')) return;
-                try {
-                    await axios.delete(`${API_URL}/api/messages/${messageId}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-        } catch (err) {
-                    console.error("Failed to delete message", err);
-                alert("Failed to delete message: " + (err.response?.data?.error || err.message));
-        }
-    };
+            <UserSettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                username={username}
+                avatarUrl={avatarUrl}
+                setAvatarUrl={setAvatarUrl}
+                token={token}
+            />
 
-    useEffect(() => {
-                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+            <EmojiManager
+                isOpen={showEmojiManager}
+                onClose={() => setShowEmojiManager(false)}
+                emojis={emojis}
+                refreshEmojis={fetchEmojis}
+            />
+        </div>
 
-    // Handle outside click for emoji picker
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
-                    setShowEmojiPicker(false);
-            }
-        };
-                document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+                {/* Chat Area */ }
+    <div className="chat-area">
+        <div className="chat-header">
+            <Hash size={24} className="header-hash" />
+            <h3>{activeChannel?.name || 'general'}</h3>
+            <span className="topic">The one and only global chat</span>
 
-    const handleInputChange = (e) => {
-        const val = e.target.value;
-                setInputValue(val);
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                <button
+                    className={`icon-btn ${showPinnedMessages ? 'active' : ''}`}
+                    onClick={() => setShowPinnedMessages(!showPinnedMessages)}
+                    title="Pinned Messages"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pin"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
+                </button>
 
-                // Autocomplete logic
-                const lastWord = val.split(' ').pop();
-        if (lastWord.startsWith(':') && lastWord.length > 1) {
-            const query = lastWord.slice(1).toLowerCase();
+                <button
+                    className={`icon-btn ${isUserSidebarOpen ? 'active' : ''}`}
+                    onClick={() => setIsUserSidebarOpen(!isUserSidebarOpen)}
+                    title="Toggle User List"
+                >
+                    <Users size={24} />
+                </button>
+            </div>
+        </div>
 
-                // 1. Search Custom Emojis
-                const customMatches = emojis
-                .filter(e => e.name.toLowerCase().includes(query))
-                .map(e => ({type: 'custom', ...e }));
-
-                // 2. Search Standard Emojis
-                const standardMatches = [];
-                if (emojiMap) {
-                    Object.keys(emojiMap).forEach(name => {
-                        if (name.includes(query)) {
-                            standardMatches.push({ type: 'standard', name: name, char: emojiMap[name] });
-                        }
-                    });
-            }
-
-                // Merge and Limit
-                const allMatches = [...customMatches, ...standardMatches].slice(0, 5); // Limit to 5 for UI
-
-                setAutocompleteList(allMatches);
-                setAutocompleteIndex(0);
-        } else {
-                    setAutocompleteList([]);
-        }
-    };
-
-    const handleKeyDown = (e) => {
-        if (autocompleteList.length > 0) {
-            if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                setAutocompleteIndex(prev => Math.max(0, prev - 1));
-            } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                setAutocompleteIndex(prev => Math.min(autocompleteList.length - 1, prev + 1));
-            } else if (e.key === 'Enter' || e.key === 'Tab') {
-                    e.preventDefault();
-                selectAutocomplete(autocompleteList[autocompleteIndex]);
-            } else if (e.key === 'Escape') {
-                    setAutocompleteList([]);
-            }
-        }
-    };
-
-    const selectAutocomplete = (emoji) => {
-        const words = inputValue.split(' ');
-                words.pop();
-
-                let suffix = '';
-                if (emoji.type === 'custom') {
-                    suffix = `:${emoji.name}: `;
-        } else {
-                    suffix = `${emoji.char} `; // Insert actual char for standard
-        }
-
-        const newValue = words.join(' ') + (words.length > 0 ? ' ' : '') + suffix;
-                setInputValue(newValue);
-                setAutocompleteList([]);
-    };
-
-    const insertEmoji = (emoji) => {
-        if (emoji.char) {
-                    setInputValue(prev => prev + emoji.char);
-        } else {
-                    setInputValue(prev => prev + `:${emoji.name}: `);
-        }
-                setShowEmojiPicker(false);
-    };
-
-    const renderMessageContent = (content) => {
-        // Regex for :emoji_name: is :[a-zA-Z0-9_]+:
-        const emojiRegex = /:([a-zA-Z0-9_]+):/g;
-
-                // Remove whitespace and check if strict match (for Jumbo)
-                const isJumbo = content.replace(/\s/g, '').replace(emojiRegex, '') === '';
-
-                const parts = content.split(emojiRegex);
-
-                if (parts.length === 1) return content;
-
-                return (
-                <span className={isJumbo ? 'jumbomoji-container' : ''}>
-                    {parts.map((part, i) => {
-                        if (i % 2 === 1) {
-                            const emojiName = part;
-                            const emoji = emojis.find(e => e.name === emojiName);
-                            if (emoji) {
-                                return (
-                                    <img
-                                        key={i}
-                                        src={`${API_URL}${emoji.url}`}
-                                        alt={`:${emojiName}:`}
-                                        className={`emoji ${isJumbo ? 'jumbo' : ''}`}
-                                        onClick={() => setLightboxImage(emoji)}
-                                        title={`:${emojiName}:`}
-                                    />
-                                );
-                            } else {
-                                return `:${emojiName}:`;
-                            }
-                        } else {
-                            return part;
-                        }
-                    })}
-                </span>
-                );
-    };
-
-    const sendMessage = (e) => {
-                    e.preventDefault();
-                if (inputValue.trim()) {
-            const payload = {
-                    user_id: 0,
-                username: username,
-                content: inputValue
-            };
-
-                socket.emit('sendMessage', payload);
-                setInputValue('');
-        }
-    };
-
-    // Calculate Offline Users
-    const offlineUsers = allUsers.filter(u => !onlineUsers.some(ou => ou.id === u.id));
-
-    const formatToCET = (dateStr, type) => {
-        if (!dateStr) return '';
-
-                // Fix for SQL timestamps (e.g. "2023-01-01 12:00:00") which lack 'Z'
-                // We assume database stores UTC. If we don't add 'Z', browser interprets as Local Time,
-                // causing a shift (often -1h) compared to the Socket messages which are explicitly UTC.
-                let safeDateStr = dateStr;
-                if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('T')) {
-                    safeDateStr = dateStr.replace(' ', 'T') + 'Z';
-        }
-
-                const date = new Date(safeDateStr);
-
-                // Force CET (Central European Time)
-                // Note: 'CET' might not be supported in all environments, 'Europe/Paris' or 'Europe/Berlin' is safer.
-                const options = {
-                    timeZone: 'Europe/Paris', // CET/CEST
-                hour12: false, // 24-hour clock
-        };
-
-                if (type === 'time') {
-            return new Intl.DateTimeFormat('en-GB', {
-                    ...options,
-                    hour: '2-digit',
-                minute: '2-digit'
-            }).format(date);
-        } else {
-            return new Intl.DateTimeFormat('en-GB', {
-                    ...options,
-                    year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            }).format(date);
-        }
-    };
-
-                return (
-                <div className="app-container">
-                    {/* Sidebar code... */}
-                    <div className="sidebar">
-                        {/* ... */}
-                        <div className="server-name">My Server</div>
-                        <div className="channels">
-                            <div className="channel active">
-                                <Hash size={20} />
-                                <span>general</span>
-                            </div>
-                        </div>
-                        <div className="user-profile">
-                            {/* ... */}
-                            <div className="user-info">
-                                <div className="avatar-upload-wrapper" title="User Settings" onClick={() => setIsSettingsOpen(true)}>
-                                    <Avatar username={username} avatarUrl={avatarUrl || null} />
-                                    <div className="avatar-overlay">
-                                        <Settings size={16} />
-                                    </div>
+        {showPinnedMessages && (
+            <div className="pinned-messages-popout">
+                <div className="pinned-header">
+                    <h3>Pinned Messages</h3>
+                </div>
+                <div className="pinned-list">
+                    {messages.filter(m => m.is_pinned).length === 0 ? (
+                        <div className="pinned-empty">No pinned messages yet.</div>
+                    ) : (
+                        messages.filter(m => m.is_pinned).map(msg => (
+                            <div key={msg.id} className="pinned-item">
+                                <div className="pinned-item-header">
+                                    <Avatar username={msg.username} avatarUrl={msg.avatar_url} size={24} />
+                                    <span className="pinned-username">{msg.username}</span>
+                                    <span className="pinned-time">{formatToCET(msg.created_at, 'full')}</span>
                                 </div>
-                                <div className="username-tag">
-                                    <span className="username">{username}</span>
+                                <div className="pinned-content">
+                                    {renderMessageContent(msg.content)}
                                 </div>
-                            </div>
-                            <div className="profile-controls">
-                                <button className="icon-btn" onClick={() => setIsSettingsOpen(true)} title="User Settings">
-                                    <Settings size={18} />
-                                </button>
-                                <button className="icon-btn" onClick={logout} title="Logout">
-                                    <LogOut size={18} />
+                                <button className="pinned-remove" onClick={() => handlePinMessage(msg.id)} title="Unpin">
+                                    <X size={16} />
                                 </button>
                             </div>
-                        </div>
-
-                        <UserSettingsModal
-                            isOpen={isSettingsOpen}
-                            onClose={() => setIsSettingsOpen(false)}
-                            username={username}
-                            avatarUrl={avatarUrl}
-                            setAvatarUrl={setAvatarUrl}
-                            token={token}
-                        />
-
-                        <EmojiManager
-                            isOpen={showEmojiManager}
-                            onClose={() => setShowEmojiManager(false)}
-                            emojis={emojis}
-                            refreshEmojis={fetchEmojis}
-                        />
-                    </div>
-
-                    {/* Chat Area */}
-                    <div className="chat-area">
-                        <div className="chat-header">
-                            <Hash size={24} className="header-hash" />
-                            <h3>general</h3>
-                            <span className="topic">The one and only global chat</span>
-
-                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                                <button
-                                    className={`icon-btn ${showPinnedMessages ? 'active' : ''}`}
-                                    onClick={() => setShowPinnedMessages(!showPinnedMessages)}
-                                    title="Pinned Messages"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pin"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
-                                </button>
-
-                                <button
-                                    className={`icon-btn ${isUserSidebarOpen ? 'active' : ''}`}
-                                    onClick={() => setIsUserSidebarOpen(!isUserSidebarOpen)}
-                                    title="Toggle User List"
-                                >
-                                    <Users size={24} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {showPinnedMessages && (
-                            <div className="pinned-messages-popout">
-                                <div className="pinned-header">
-                                    <h3>Pinned Messages</h3>
-                                </div>
-                                <div className="pinned-list">
-                                    {messages.filter(m => m.is_pinned).length === 0 ? (
-                                        <div className="pinned-empty">No pinned messages yet.</div>
-                                    ) : (
-                                        messages.filter(m => m.is_pinned).map(msg => (
-                                            <div key={msg.id} className="pinned-item">
-                                                <div className="pinned-item-header">
-                                                    <Avatar username={msg.username} avatarUrl={msg.avatar_url} size={24} />
-                                                    <span className="pinned-username">{msg.username}</span>
-                                                    <span className="pinned-time">{formatToCET(msg.created_at, 'full')}</span>
-                                                </div>
-                                                <div className="pinned-content">
-                                                    {renderMessageContent(msg.content)}
-                                                </div>
-                                                <button className="pinned-remove" onClick={() => handlePinMessage(msg.id)} title="Unpin">
-                                                    <X size={16} />
-                                                </button>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="messages-list">
-                            {messages.map((msg, idx) => {
-                                const isDifferentUser = idx === 0 || messages[idx - 1].username !== msg.username;
-
-                                return (
-                                    <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'}`}>
-                                        <div className="message-left-col">
-                                            {isDifferentUser ? (
-                                                <Avatar
-                                                    username={msg.username}
-                                                    avatarUrl={msg.avatar_url}
-                                                    size={40}
-                                                    className="message-avatar"
-                                                />
-                                            ) : (
-                                                <div className="message-timestamp-hover">
-                                                    {formatToCET(msg.created_at, 'time')}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="message-right-col">
-                                            {isDifferentUser && (
-                                                <div className="message-header">
-                                                    <span className="message-username">{msg.username}</span>
-                                                    <span className="message-time">
-                                                        {formatToCET(msg.created_at, 'full')}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div className="message-content">
-                                                {renderMessageContent(msg.content)}
-                                            </div>
-                                        </div>
-
-                                        <div className="message-actions">
-                                            <button
-                                                className="message-action-btn"
-                                                title={msg.is_pinned ? "Unpin Message" : "Pin Message"}
-                                                onClick={() => handlePinMessage(msg.id)}
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
-                                            </button>
-
-                                            {msg.username === username && (
-                                                <button
-                                                    className="message-action-btn delete-btn"
-                                                    title="Delete Message"
-                                                    onClick={() => handleDeleteMessage(msg.id)}
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        <div className="input-area">
-                            {/* ... (input area same as before) ... */}
-                            {autocompleteList.length > 0 && (
-                                <div className="autocomplete-popup">
-                                    {autocompleteList.map((emoji, idx) => (
-                                        <div
-                                            key={idx}
-                                            className={`autocomplete-item ${idx === autocompleteIndex ? 'active' : ''}`}
-                                            onClick={() => selectAutocomplete(emoji)}
-                                        >
-                                            {emoji.type === 'custom' ? (
-                                                <img src={`${API_URL}${emoji.url}`} alt={emoji.name} />
-                                            ) : (
-                                                <span style={{ marginRight: 8, fontSize: 20 }}>{emoji.char}</span>
-                                            )}
-                                            <span>:{emoji.name}:</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="chat-form-container">
-                                <form className="chat-form" onSubmit={sendMessage}>
-                                    <input
-                                        type="text"
-                                        placeholder={`Message #general`}
-                                        value={inputValue}
-                                        onChange={handleInputChange}
-                                        onKeyDown={handleKeyDown}
-                                    />
-                                    <div className="chat-form-actions">
-                                        <button
-                                            type="button"
-                                            className="emoji-trigger-btn"
-                                            onClick={() => setShowEmojiManager(true)}
-                                            title="Manage Emojis"
-                                        >
-                                            <ListPlus size={20} />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="emoji-trigger-btn"
-                                            onClick={openEmojiPicker}
-                                            title="Open Emojis"
-                                        >
-                                            <Smile size={20} />
-                                        </button>
-                                    </div>
-                                </form>
-                                {showEmojiPicker && (
-                                    <div className="emoji-picker-popup" ref={emojiPickerRef}>
-                                        <EmojiPicker
-                                            emojis={emojis}
-                                            onSelect={insertEmoji}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Users Sidebar */}
-                    <div className={`users-sidebar ${isUserSidebarOpen ? 'open' : 'closed'}`}>
-                        {/* Online Users */}
-                        <div className="users-section">
-                            <div className="section-header">ONLINE — {onlineUsers.length}</div>
-                            {onlineUsers.map(u => (
-                                <div key={u.id} className="user-item online">
-                                    <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
-                                    <div className="user-text">
-                                        <span className="username">{u.username}</span>
-                                        {/* <span className="status-text">{u.bio || ''}</span> */}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Offline Users */}
-                        {offlineUsers.length > 0 && (
-                            <div className="users-section mt-4">
-                                <div className="section-header">OFFLINE — {offlineUsers.length}</div>
-                                {offlineUsers.map(u => (
-                                    <div key={u.id} className="user-item offline">
-                                        <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
-                                        <div className="user-text">
-                                            <span className="username">{u.username}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Lightbox */}
-                    {lightboxImage && (
-                        <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
-                            <div className="lightbox-content" onClick={e => e.stopPropagation()}>
-                                <img src={`${API_URL}${lightboxImage.url}`} alt={lightboxImage.name} />
-                                <div className="lightbox-footer">
-                                    <span className="lightbox-name">:{lightboxImage.name}:</span>
-                                    <a href={`${API_URL}${lightboxImage.url}`} target="_blank" rel="noopener noreferrer">Open in original</a>
-                                </div>
-                            </div>
-                            <button className="lightbox-close" onClick={() => setLightboxImage(null)}>
-                                <X size={24} />
-                            </button>
-                        </div>
+                        ))
                     )}
                 </div>
+            </div>
+        )}
+
+        <div className="messages-list">
+            {displayedMessages.map((msg, idx) => {
+                const isDifferentUser = idx === 0 || displayedMessages[idx - 1].username !== msg.username;
+
+                return (
+                    <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'}`}>
+                        <div className="message-left-col">
+                            {isDifferentUser ? (
+                                <Avatar
+                                    username={msg.username}
+                                    avatarUrl={msg.avatar_url}
+                                    size={40}
+                                    className="message-avatar"
+                                />
+                            ) : (
+                                <div className="message-timestamp-hover">
+                                    {formatToCET(msg.created_at, 'time')}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="message-right-col">
+                            {isDifferentUser && (
+                                <div className="message-header">
+                                    <span className="message-username">{msg.username}</span>
+                                    <span className="message-time">
+                                        {formatToCET(msg.created_at, 'full')}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="message-content">
+                                {renderMessageContent(msg.content)}
+                            </div>
+                        </div>
+
+                        <div className="message-actions">
+                            <button
+                                className="message-action-btn"
+                                title={msg.is_pinned ? "Unpin Message" : "Pin Message"}
+                                onClick={() => handlePinMessage(msg.id)}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
+                            </button>
+
+                            {msg.username === username && (
+                                <button
+                                    className="message-action-btn delete-btn"
+                                    title="Delete Message"
+                                    onClick={() => handleDeleteMessage(msg.id)}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 );
+            })}
+            <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-area">
+            {/* ... (input area same as before) ... */}
+            {autocompleteList.length > 0 && (
+                <div className="autocomplete-popup">
+                    {autocompleteList.map((emoji, idx) => (
+                        <div
+                            key={idx}
+                            className={`autocomplete-item ${idx === autocompleteIndex ? 'active' : ''}`}
+                            onClick={() => selectAutocomplete(emoji)}
+                        >
+                            {emoji.type === 'custom' ? (
+                                <img src={`${API_URL}${emoji.url}`} alt={emoji.name} />
+                            ) : (
+                                <span style={{ marginRight: 8, fontSize: 20 }}>{emoji.char}</span>
+                            )}
+                            <span>:{emoji.name}:</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className="chat-form-container">
+                <form className="chat-form" onSubmit={sendMessage}>
+                    <input
+                        type="text"
+                        placeholder={`Message #general`}
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                    />
+                    <div className="chat-form-actions">
+                        <button
+                            type="button"
+                            className="emoji-trigger-btn"
+                            onClick={() => setShowEmojiManager(true)}
+                            title="Manage Emojis"
+                        >
+                            <ListPlus size={20} />
+                        </button>
+                        <button
+                            type="button"
+                            className="emoji-trigger-btn"
+                            onClick={openEmojiPicker}
+                            title="Open Emojis"
+                        >
+                            <Smile size={20} />
+                        </button>
+                    </div>
+                </form>
+                {showEmojiPicker && (
+                    <div className="emoji-picker-popup" ref={emojiPickerRef}>
+                        <EmojiPicker
+                            emojis={emojis}
+                            onSelect={insertEmoji}
+                        />
+                    </div>
+                )}
+            </div>
+        </div>
+    </div>
+
+    {/* Users Sidebar */ }
+    <div className={`users-sidebar ${isUserSidebarOpen ? 'open' : 'closed'}`}>
+        {/* Online Users */}
+        <div className="users-section">
+            <div className="section-header">ONLINE — {onlineUsers.length}</div>
+            {onlineUsers.map(u => (
+                <div key={u.id} className="user-item online">
+                    <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
+                    <div className="user-text">
+                        <span className="username">{u.username}</span>
+                        {/* <span className="status-text">{u.bio || ''}</span> */}
+                    </div>
+                </div>
+            ))}
+        </div>
+
+        {/* Offline Users */}
+        {offlineUsers.length > 0 && (
+            <div className="users-section mt-4">
+                <div className="section-header">OFFLINE — {offlineUsers.length}</div>
+                {offlineUsers.map(u => (
+                    <div key={u.id} className="user-item offline">
+                        <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
+                        <div className="user-text">
+                            <span className="username">{u.username}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+    </div>
+
+    {/* Lightbox */ }
+    {
+        lightboxImage && (
+            <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
+                <div className="lightbox-content" onClick={e => e.stopPropagation()}>
+                    <img src={`${API_URL}${lightboxImage.url}`} alt={lightboxImage.name} />
+                    <div className="lightbox-footer">
+                        <span className="lightbox-name">:{lightboxImage.name}:</span>
+                        <a href={`${API_URL}${lightboxImage.url}`} target="_blank" rel="noopener noreferrer">Open in original</a>
+                    </div>
+                </div>
+                <button className="lightbox-close" onClick={() => setLightboxImage(null)}>
+                    <X size={24} />
+                </button>
+            </div>
+        )
+    }
+            </div >
+            );
 }
