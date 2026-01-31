@@ -514,7 +514,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
             />
         </div>
 
-                {/* Chat Area */ }
+            {/* Chat Area */ }
     <div className="chat-area">
         <div className="chat-header">
             <Hash size={24} className="header-hash" />
