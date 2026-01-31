@@ -53,7 +53,64 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         }
     };
 
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const updateFavicon = (count) => {
+        const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+        link.type = 'image/x-icon';
+        link.rel = 'shortcut icon';
+        link.id = 'favicon'; // Ensure ID
+
+        if (count === 0) {
+            link.href = '/vite.svg';
+            document.getElementsByTagName('head')[0].appendChild(link);
+            document.title = 'Diskok';
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+
+        const img = new Image();
+        img.src = '/vite.svg';
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, 32, 32);
+
+            // Badge Circle
+            ctx.beginPath();
+            ctx.arc(22, 22, 10, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ef4444'; // Red-500
+            ctx.fill();
+            ctx.strokeStyle = '#232428'; // Dark bg
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Badge Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const badgeText = count > 9 ? '9+' : count.toString();
+            ctx.fillText(badgeText, 22, 23); // slightly offset y for alignment
+
+            link.href = canvas.toDataURL('image/png');
+            document.getElementsByTagName('head')[0].appendChild(link);
+            document.title = `(${count}) Diskok`;
+        };
+    };
+
     useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                setUnreadCount(0);
+                updateFavicon(0);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         // Initial fetch
         const fetchMessages = async () => {
             try {
@@ -74,6 +131,13 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
 
         socket.on('newMessage', (msg) => {
             setMessages((prev) => [...prev, msg]);
+            if (document.hidden) {
+                setUnreadCount(prev => {
+                    const newCount = prev + 1;
+                    updateFavicon(newCount);
+                    return newCount;
+                });
+            }
         });
 
         socket.on('onlineUsers', (users) => {
@@ -81,6 +145,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         });
 
         return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             socket.off('newMessage');
             socket.off('onlineUsers');
             socket.disconnect();
