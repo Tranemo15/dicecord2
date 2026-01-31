@@ -38,18 +38,22 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     const fetchEmojis = async () => {
         try {
             const res = await axios.get(`${API_URL}/api/emojis`);
-            setEmojis(res.data);
+            const emojisData = Array.isArray(res.data) ? res.data : [];
+            setEmojis(emojisData);
         } catch (err) {
             console.error("Failed to fetch emojis", err);
+            setEmojis([]);
         }
     };
 
     const fetchAllUsers = async () => {
         try {
             const res = await axios.get(`${API_URL}/api/users`);
-            setAllUsers(res.data);
+            const usersData = Array.isArray(res.data) ? res.data : [];
+            setAllUsers(usersData);
         } catch (err) {
             console.error("Failed to fetch users", err);
+            setAllUsers([]);
         }
     };
 
@@ -122,12 +126,16 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         const fetchChannels = async () => {
             try {
                 const res = await axios.get(`${API_URL}/api/channels`);
-                setChannels(res.data);
-                if (res.data.length > 0) {
-                    setActiveChannel(res.data[0]);
+                // Ensure we always have an array
+                const channelsData = Array.isArray(res.data) ? res.data : [];
+                setChannels(channelsData);
+                if (channelsData.length > 0) {
+                    setActiveChannel(channelsData[0]);
                 }
             } catch (err) {
                 console.error("Failed to fetch channels", err);
+                // Set empty array on error to prevent map errors
+                setChannels([]);
             }
         };
 
@@ -166,7 +174,8 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         });
 
         socket.on('onlineUsers', (users) => {
-            setOnlineUsers(users);
+            // Ensure we always have an array
+            setOnlineUsers(Array.isArray(users) ? users : []);
         });
 
         socket.on('messageUpdated', (updatedMsg) => {

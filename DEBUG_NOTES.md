@@ -3,8 +3,15 @@
 ## Problem Description
 The website loads normally for about half a second, then turns into a dark gray static site.
 
+## Actual Error from Console
+```
+Uncaught TypeError: v.map is not a function
+```
+
+This error occurs when trying to call `.map()` on a variable that is not an array (e.g., `null`, `undefined`, or an object).
+
 ## Root Cause Analysis
-This behavior typically indicates a **React runtime error** that causes the component to crash and show an error boundary or blank screen.
+The API endpoints were returning non-array data or failing, which caused state variables to be set to `null` or `undefined`. When React tried to render these with `.map()`, it crashed.
 
 ## Fixes Applied
 
@@ -41,25 +48,73 @@ const handlePinMessage = async (messageId) => {
 - **Issue:** The main container was closed prematurely, leaving components outside the return statement
 - **Fix:** Properly nested all components (Sidebar, Chat Area, Users Sidebar, Lightbox) within the main `app-container` div
 
-## How to Verify the Fix
+### 5. **CRITICAL FIX: Added Array Validation to All Fetch Functions**
+**File:** `client/src/pages/Chat.jsx`
+- **Issue:** API responses were not validated, causing non-array values to be set in state
+- **Fix:** Added array validation to all fetch functions:
 
-1. **Open Browser Developer Console** (Press F12)
-2. **Go to the Console tab**
-3. **Refresh the page**
-4. **Look for any error messages** (they will be in red)
+#### fetchChannels:
+```javascript
+const fetchChannels = async () => {
+    try {
+        const res = await axios.get(`${API_URL}/api/channels`);
+        const channelsData = Array.isArray(res.data) ? res.data : [];
+        setChannels(channelsData);
+        if (channelsData.length > 0) {
+            setActiveChannel(channelsData[0]);
+        }
+    } catch (err) {
+        console.error("Failed to fetch channels", err);
+        setChannels([]); // Always set empty array on error
+    }
+};
+```
 
-## Common Error Messages to Look For
+#### fetchEmojis:
+```javascript
+const fetchEmojis = async () => {
+    try {
+        const res = await axios.get(`${API_URL}/api/emojis`);
+        const emojisData = Array.isArray(res.data) ? res.data : [];
+        setEmojis(emojisData);
+    } catch (err) {
+        console.error("Failed to fetch emojis", err);
+        setEmojis([]);
+    }
+};
+```
 
-- `ReferenceError: showPinnedMessages is not defined`
-- `TypeError: handlePinMessage is not a function`
-- `Uncaught Error: Minified React error`
-- Any syntax errors or JSX parsing errors
+#### fetchAllUsers:
+```javascript
+const fetchAllUsers = async () => {
+    try {
+        const res = await axios.get(`${API_URL}/api/users`);
+        const usersData = Array.isArray(res.data) ? res.data : [];
+        setAllUsers(usersData);
+    } catch (err) {
+        console.error("Failed to fetch users", err);
+        setAllUsers([]);
+    }
+};
+```
 
-## If the Issue Persists
+#### Socket onlineUsers event:
+```javascript
+socket.on('onlineUsers', (users) => {
+    setOnlineUsers(Array.isArray(users) ? users : []);
+});
+```
 
-Please check the browser console and share:
-1. The exact error message
-2. The file and line number where the error occurs
-3. Any stack trace information
+## Arrays Protected
+All arrays that use `.map()` are now guaranteed to be arrays:
+- ✅ `channels` - validated in fetchChannels
+- ✅ `emojis` - validated in fetchEmojis
+- ✅ `onlineUsers` - validated in socket event
+- ✅ `allUsers` - validated in fetchAllUsers
+- ✅ `offlineUsers` - derived from allUsers.filter() (always returns array)
+- ✅ `messages` - initialized as [] in useState
+- ✅ `displayedMessages` - derived from messages.filter() (always returns array)
+- ✅ `autocompleteList` - initialized as [] in useState
 
-This will help identify any remaining issues.
+## Result
+The app should now load without crashing. Even if API endpoints fail or return unexpected data, the app will gracefully handle it by using empty arrays instead of crashing.
