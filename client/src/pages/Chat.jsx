@@ -466,7 +466,6 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                 <div className="server-name">My Server</div>
                 <div className="channels-header" style={{ padding: '0 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600' }}>
                     <span>TEXT CHANNELS</span>
-                    <Plus size={16} style={{ cursor: 'pointer' }} onClick={() => setIsCreatingChannel(true)} />
                 </div>
 
                 <div className="channels">
