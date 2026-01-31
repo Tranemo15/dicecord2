@@ -3,10 +3,29 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const jwt = require('jsonwebtoken'); // Add this line at top
 const authRoutes = require('./auth');
 const socketHandler = require('./socket');
 const db = require('./db');
 const path = require('path');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey123';
+
+// Middleware to verify token
+const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization'];
+    if (!token) return res.status(403).json({ error: 'No token provided' });
+
+    // Bearer <token>
+    const tokenString = token.startsWith('Bearer ') ? token.slice(7) : token;
+
+    jwt.verify(tokenString, JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(500).json({ error: 'Failed to authenticate token' });
+        req.user = decoded; // { id, username, iat, exp }
+        next();
+    });
+};
+
 let upload;
 try {
     const multer = require('multer');
@@ -244,6 +263,43 @@ app.post('/api/messages/:id/pin', async (req, res) => {
         io.emit('messageUpdated', { id: parseInt(id), is_pinned: newStatus });
 
         res.json({ id, is_pinned: newStatus });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Message Route
+app.delete('/api/messages/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    try {
+        // 1. Get message to verify ownership
+        const rows = await db.query('SELECT user_id, username FROM messages WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Message not found' });
+
+        const msg = rows[0];
+
+        // Check ownership (DB stores user_id, auth token has id)
+        // If user_id is null (older messages?), check username
+        if (msg.user_id !== userId) {
+            // Fallback for older messages or if IDs mismatch but username is same (rare if reseeded)
+            if (msg.username !== req.user.username) {
+                return res.status(403).json({ error: 'You can only delete your own messages' });
+            }
+        }
+
+        // 2. Delete from DB
+        await db.query('DELETE FROM messages WHERE id = ?', [id]);
+
+        // 3. Emit event
+        const io = req.app.get('io');
+        // Check if io exists (it should)
+        if (io) {
+            io.emit('messageDeleted', parseInt(id));
+        }
+
+        res.json({ message: 'Message deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

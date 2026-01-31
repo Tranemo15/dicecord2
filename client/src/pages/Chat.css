@@ -750,3 +750,10 @@
     color: #ef4444;
     /* Red for delete/unpin */
 }
+
+/* Delete Button Hover */
+.message-action-btn.delete-btn:hover {
+    color: #ef4444;
+    /* Red */
+    background-color: var(--bg-tertiary);
+}

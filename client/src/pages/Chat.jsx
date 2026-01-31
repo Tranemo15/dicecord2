@@ -150,11 +150,16 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
             ));
         });
 
+        socket.on('messageDeleted', (deletedId) => {
+            setMessages((prev) => prev.filter(m => m.id !== deletedId));
+        });
+
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             socket.off('newMessage');
             socket.off('onlineUsers');
             socket.off('messageUpdated');
+            socket.off('messageDeleted');
             socket.disconnect();
         };
     }, [token]);
@@ -164,9 +169,20 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     const handlePinMessage = async (messageId) => {
         try {
             await axios.post(`${API_URL}/api/messages/${messageId}/pin`);
-            // Socket will handle update
         } catch (err) {
             console.error("Failed to pin message", err);
+        }
+    };
+
+    const handleDeleteMessage = async (messageId) => {
+        if (!confirm('Are you sure you want to delete this message?')) return;
+        try {
+            await axios.delete(`${API_URL}/api/messages/${messageId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (err) {
+            console.error("Failed to delete message", err);
+            alert("Failed to delete message: " + (err.response?.data?.error || err.message));
         }
     };
 
@@ -505,6 +521,16 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
                                     </button>
+
+                                    {msg.username === username && (
+                                        <button
+                                            className="message-action-btn delete-btn"
+                                            title="Delete Message"
+                                            onClick={() => handleDeleteMessage(msg.id)}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );
