@@ -616,16 +616,20 @@
 /* Message Actions (Hover Menu) */
 .message-actions {
     position: absolute;
-    top: -12px;
-    /* Popped up slightly */
+    top: -16px;
+    /* Popped up slightly higher */
     right: 16px;
     background-color: var(--bg-primary);
     border: 1px solid var(--bg-tertiary);
     border-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    /* Discord uses subtle rounding */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     display: none;
     z-index: 10;
-    padding: 0 4px;
+    padding: 0;
+    overflow: hidden;
+    /* For inner button hover to respect radius */
+    transition: box-shadow 0.1s;
 }
 
 .message-item:hover .message-actions {
@@ -636,11 +640,12 @@
     background: transparent;
     border: none;
     color: var(--text-muted);
-    padding: 6px;
+    padding: 6px 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.1s, color 0.1s;
 }
 
 .message-action-btn:hover {
@@ -749,11 +754,4 @@
 .pinned-remove:hover {
     color: #ef4444;
     /* Red for delete/unpin */
-}
-
-/* Delete Button Hover */
-.message-action-btn.delete-btn:hover {
-    color: #ef4444;
-    /* Red */
-    background-color: var(--bg-tertiary);
 }

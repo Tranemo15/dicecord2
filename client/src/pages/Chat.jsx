@@ -483,7 +483,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                         const isDifferentUser = idx === 0 || messages[idx - 1].username !== msg.username;
 
                         return (
-                            <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'} ${msg.is_pinned ? 'pinned-message-bg' : ''}`}>
+                            <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'}`}>
                                 <div className="message-left-col">
                                     {isDifferentUser ? (
                                         <Avatar
