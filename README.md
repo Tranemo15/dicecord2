@@ -27,6 +27,7 @@ A simple, real-time chat application inspired by Discord.
    cd ../client
    npm install
    ```
+test
 
 2. Start the development servers:
    
