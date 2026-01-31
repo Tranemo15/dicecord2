@@ -55,7 +55,10 @@ class Database {
   }
 
   async init() {
-    const isPg = this.type === 'postgres';
+    // Re-check environment variable to be absolutely sure
+    const isPg = (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres')) || this.type === 'postgres';
+    console.log(`[db.js] init() called. isPg=${isPg}, this.type=${this.type}`);
+
     const idType = isPg ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
     const timestamp = isPg ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : 'DATETIME DEFAULT CURRENT_TIMESTAMP';
     const textUnique = isPg ? 'TEXT UNIQUE' : 'TEXT UNIQUE';
