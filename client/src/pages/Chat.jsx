@@ -303,24 +303,36 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                 <div className="messages-list">
                     {messages.map((msg, idx) => {
                         const isDifferentUser = idx === 0 || messages[idx - 1].username !== msg.username;
+
                         return (
-                            <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'mt-4' : ''}`}>
-                                {isDifferentUser && (
-                                    <div className="message-header">
+                            <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'}`}>
+                                <div className="message-left-col">
+                                    {isDifferentUser ? (
                                         <Avatar
                                             username={msg.username}
                                             avatarUrl={msg.avatar_url}
-                                            size={32}
+                                            size={40}
                                             className="message-avatar"
                                         />
-                                        <span className="message-username">{msg.username}</span>
-                                        <span className="message-time">
-                                            {msg.created_at ? format(new Date(msg.created_at), 'MM/dd/yyyy h:mm a') : ''}
-                                        </span>
+                                    ) : (
+                                        <div className="message-timestamp-hover">
+                                            {msg.created_at ? format(new Date(msg.created_at), 'h:mm a') : ''}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="message-right-col">
+                                    {isDifferentUser && (
+                                        <div className="message-header">
+                                            <span className="message-username">{msg.username}</span>
+                                            <span className="message-time">
+                                                {msg.created_at ? format(new Date(msg.created_at), 'MM/dd/yyyy h:mm a') : ''}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="message-content">
+                                        {renderMessageContent(msg.content)}
                                     </div>
-                                )}
-                                <div className={`message-content ${isDifferentUser ? 'pl-12' : 'pl-12'}`}>
-                                    {renderMessageContent(msg.content)}
                                 </div>
                             </div>
                         );
