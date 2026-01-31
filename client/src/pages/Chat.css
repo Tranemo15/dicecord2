@@ -573,9 +573,8 @@
     color: var(--text-normal);
 }
 
-.user-item .avatar {
-    /* Increased margin as requested ("tiny bit further away") */
-    margin-right: 16px;
+.user-item img {
+    margin-right: 12px;
     flex-shrink: 0;
 }
 
