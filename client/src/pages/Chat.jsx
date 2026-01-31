@@ -7,6 +7,7 @@ import EmojiPicker from '../components/EmojiPicker';
 import EmojiManager from '../components/EmojiManager';
 import Avatar from '../components/Avatar';
 import UserSettingsModal from '../components/UserSettingsModal';
+import UserProfileModal from '../components/UserProfileModal';
 import { emoji as emojiMap } from 'emoji-name-map';
 import './Chat.css';
 
@@ -19,6 +20,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showEmojiManager, setShowEmojiManager] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [selectedUserProfile, setSelectedUserProfile] = useState(null); // Username for profile view
 
     // User Sidebar State
     const [onlineUsers, setOnlineUsers] = useState([]);
@@ -579,8 +581,10 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                                 messages.filter(m => m.is_pinned).map(msg => (
                                     <div key={msg.id} className="pinned-item">
                                         <div className="pinned-item-header">
-                                            <Avatar username={msg.username} avatarUrl={msg.avatar_url} size={24} />
-                                            <span className="pinned-username">{msg.username}</span>
+                                            <div onClick={() => setSelectedUserProfile(msg.username)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                <Avatar username={msg.username} avatarUrl={msg.avatar_url} size={24} />
+                                                <span className="pinned-username" style={{ marginLeft: 8 }}>{msg.username}</span>
+                                            </div>
                                             <span className="pinned-time">{formatToCET(msg.created_at, 'full')}</span>
                                         </div>
                                         <div className="pinned-content">
@@ -604,12 +608,14 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                             <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'}`}>
                                 <div className="message-left-col">
                                     {isDifferentUser ? (
-                                        <Avatar
-                                            username={msg.username}
-                                            avatarUrl={msg.avatar_url}
-                                            size={40}
-                                            className="message-avatar"
-                                        />
+                                        <div onClick={() => setSelectedUserProfile(msg.username)} style={{ cursor: 'pointer' }}>
+                                            <Avatar
+                                                username={msg.username}
+                                                avatarUrl={msg.avatar_url}
+                                                size={40}
+                                                className="message-avatar"
+                                            />
+                                        </div>
                                     ) : (
                                         <div className="message-timestamp-hover">
                                             {formatToCET(msg.created_at, 'time')}
@@ -620,7 +626,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                                 <div className="message-right-col">
                                     {isDifferentUser && (
                                         <div className="message-header">
-                                            <span className="message-username">{msg.username}</span>
+                                            <span className="message-username" onClick={() => setSelectedUserProfile(msg.username)} style={{ cursor: 'pointer' }}>{msg.username}</span>
                                             <span className="message-time">
                                                 {formatToCET(msg.created_at, 'full')}
                                             </span>
@@ -723,7 +729,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                 <div className="users-section">
                     <div className="section-header">ONLINE — {onlineUsers.length}</div>
                     {onlineUsers.map(u => (
-                        <div key={u.id} className="user-item online">
+                        <div key={u.id} className="user-item online" onClick={() => setSelectedUserProfile(u.username)} style={{ cursor: 'pointer' }}>
                             <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
                             <div className="user-text">
                                 <span className="username">{u.username}</span>
@@ -738,7 +744,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                     <div className="users-section mt-4">
                         <div className="section-header">OFFLINE — {offlineUsers.length}</div>
                         {offlineUsers.map(u => (
-                            <div key={u.id} className="user-item offline">
+                            <div key={u.id} className="user-item offline" onClick={() => setSelectedUserProfile(u.username)} style={{ cursor: 'pointer' }}>
                                 <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
                                 <div className="user-text">
                                     <span className="username">{u.username}</span>
@@ -748,6 +754,26 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                     </div>
                 )}
             </div>
+
+            {/* Modals */}
+            {isSettingsOpen && (
+                <UserSettingsModal
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    username={username}
+                    token={token}
+                    avatarUrl={avatarUrl}
+                    onAvatarUpdate={setAvatarUrl}
+                    onLogout={logout}
+                />
+            )}
+
+            {selectedUserProfile && (
+                <UserProfileModal
+                    username={selectedUserProfile}
+                    onClose={() => setSelectedUserProfile(null)}
+                />
+            )}
 
             {/* Lightbox */}
             {
