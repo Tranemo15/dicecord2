@@ -89,11 +89,11 @@ app.get('/api/messages', async (req, res) => {
             SELECT messages.*, users.avatar_url, users.banner_url 
             FROM messages 
             LEFT JOIN users ON messages.user_id = users.id 
-            ORDER BY messages.created_at ASC 
+            ORDER BY messages.created_at DESC 
             LIMIT 100
         `;
         const rows = await db.query(sql);
-        res.json(rows);
+        res.json(rows.reverse());
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
