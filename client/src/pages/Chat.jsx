@@ -125,12 +125,18 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         // Fetch Channels
         const fetchChannels = async () => {
             try {
+                console.log('Fetching channels...');
                 const res = await axios.get(`${API_URL}/api/channels`);
+                console.log('Channels API response:', res);
+
                 // Ensure we always have an array
                 const channelsData = Array.isArray(res.data) ? res.data : [];
+                console.log('Processed channels data:', channelsData);
+
                 setChannels(channelsData);
                 if (channelsData.length > 0) {
-                    setActiveChannel(channelsData[0]);
+                    // Only auto-select if we don't have one, or if current one is invalid
+                    setActiveChannel(prev => prev || channelsData[0]);
                 }
             } catch (err) {
                 console.error("Failed to fetch channels", err);

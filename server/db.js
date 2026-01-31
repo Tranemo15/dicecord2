@@ -126,12 +126,13 @@ class Database {
         )
       `);
 
-      // Add default channel (compatible with both SQLite and PostgreSQL)
-      if (isPg) {
-        await this.query(`INSERT INTO channels (id, name) VALUES (1, 'general') ON CONFLICT (id) DO NOTHING`);
-      } else {
-        await this.query(`INSERT OR IGNORE INTO channels (id, name) VALUES (1, 'general')`);
-      }
+      // Add default channel (Compatible with BOTH SQLite and PostgreSQL)
+      // Uses standard SQL: INSERT ... SELECT ... WHERE NOT EXISTS
+      await this.query(`
+        INSERT INTO channels (id, name) 
+        SELECT 1, 'general' 
+        WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = 1)
+      `);
 
       // Add channel_id to messages
       try {
