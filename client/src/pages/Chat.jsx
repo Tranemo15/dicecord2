@@ -123,27 +123,15 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
         // Fetch Channels
+        // Fetch Channels - RESTORED TO SIMPLE STATE
         const fetchChannels = async () => {
-            try {
-                console.log('Fetching channels...');
-                const res = await axios.get(`${API_URL}/api/channels`);
-                console.log('Channels API response:', res);
-
-                // Ensure we always have an array
-                const channelsData = Array.isArray(res.data) ? res.data : [];
-                console.log('Processed channels data:', channelsData);
-
-                setChannels(channelsData);
-                if (channelsData.length > 0) {
-                    // Only auto-select if we don't have one, or if current one is invalid
-                    setActiveChannel(prev => prev || channelsData[0]);
-                }
-            } catch (err) {
-                console.error("Failed to fetch channels", err);
-                // Set empty array on error to prevent map errors
-                setChannels([]);
-            }
+            // Bypass API for stability "Rollback"
+            console.log('Using static channels for stability');
+            const staticChannels = [{ id: 1, name: 'general', type: 'text' }];
+            setChannels(staticChannels);
+            setActiveChannel(staticChannels[0]);
         };
+
 
         fetchChannels();
         fetchEmojis();

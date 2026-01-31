@@ -116,11 +116,7 @@ class Database {
         // Ignore if column already exists
       }
 
-      // FORCE RESET channels table to fix bad schema
-      // TODO: Remove this line after one successful deployment
-      await this.query('DROP TABLE IF EXISTS channels CASCADE');
-
-      // Channels table
+      // Channels table - Simplified for stability
       await this.query(`
         CREATE TABLE IF NOT EXISTS channels (
           id ${idType},
@@ -130,23 +126,26 @@ class Database {
         )
       `);
 
-      // Add default channel (Compatible with BOTH SQLite and PostgreSQL)
-      // Uses standard SQL: INSERT ... SELECT ... WHERE NOT EXISTS
-      await this.query(`
-        INSERT INTO channels (id, name) 
-        SELECT 1, 'general' 
-        WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = 1)
-      `);
+      // Ensure 'general' channel exists using simple syntax
+      try {
+        const channels = await this.query('SELECT count(*) as count FROM channels');
+        // If table is empty, insert general
+        if (channels[0].count == 0 || channels[0].count === '0') {
+          await this.query("INSERT INTO channels (name) VALUES ('general')");
+        }
+      } catch (e) {
+        // Fallback if query fails, valid for some DB states
+        try {
+          await this.query("INSERT INTO channels (name) VALUES ('general')");
+        } catch (err) { /* Ignore duplicate */ }
+      }
 
-      // Add channel_id to messages
+      // Add channel_id to messages (legacy support)
       try {
         await this.query('ALTER TABLE messages ADD COLUMN channel_id INTEGER DEFAULT 1');
       } catch (err) {
         // Ignore
       }
-
-      // Ensure old messages have channel_id = 1
-      await this.query('UPDATE messages SET channel_id = 1 WHERE channel_id IS NULL');
 
       console.log('Database tables initialized.');
     } catch (err) {
