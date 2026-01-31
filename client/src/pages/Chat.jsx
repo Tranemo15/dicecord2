@@ -299,10 +299,40 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     // Calculate Offline Users
     const offlineUsers = allUsers.filter(u => !onlineUsers.some(ou => ou.id === u.id));
 
+    const formatToCET = (dateStr, type) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+
+        // Force CET (Central European Time)
+        // Note: 'CET' might not be supported in all environments, 'Europe/Paris' or 'Europe/Berlin' is safer.
+        const options = {
+            timeZone: 'Europe/Paris', // CET/CEST
+            hour12: false, // 24-hour clock
+        };
+
+        if (type === 'time') {
+            return new Intl.DateTimeFormat('en-GB', {
+                ...options,
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        } else {
+            return new Intl.DateTimeFormat('en-GB', {
+                ...options,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        }
+    };
+
     return (
         <div className="app-container">
-            {/* Sidebar */}
+            {/* Sidebar code... */}
             <div className="sidebar">
+                {/* ... */}
                 <div className="server-name">My Server</div>
                 <div className="channels">
                     <div className="channel active">
@@ -311,6 +341,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                     </div>
                 </div>
                 <div className="user-profile">
+                    {/* ... */}
                     <div className="user-info">
                         <div className="avatar-upload-wrapper" title="User Settings" onClick={() => setIsSettingsOpen(true)}>
                             <Avatar username={username} avatarUrl={avatarUrl || null} />
@@ -381,7 +412,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                                         />
                                     ) : (
                                         <div className="message-timestamp-hover">
-                                            {msg.created_at ? format(new Date(msg.created_at), 'h:mm a') : ''}
+                                            {formatToCET(msg.created_at, 'time')}
                                         </div>
                                     )}
                                 </div>
@@ -391,7 +422,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                                         <div className="message-header">
                                             <span className="message-username">{msg.username}</span>
                                             <span className="message-time">
-                                                {msg.created_at ? format(new Date(msg.created_at), 'MM/dd/yyyy h:mm a') : ''}
+                                                {formatToCET(msg.created_at, 'full')}
                                             </span>
                                         </div>
                                     )}
