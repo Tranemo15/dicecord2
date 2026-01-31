@@ -4,6 +4,12 @@ const path = require('path');
 
 class Database {
   constructor() {
+    // Debug: Show DATABASE_URL status
+    console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+    if (process.env.DATABASE_URL) {
+      console.log('DATABASE_URL starts with postgres:', process.env.DATABASE_URL.startsWith('postgres'));
+    }
+
     this.type = (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres')) ? 'postgres' : 'sqlite';
     console.log(`Initializing database adapter for: ${this.type}`);
 
