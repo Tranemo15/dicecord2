@@ -44,7 +44,7 @@ module.exports = (io) => {
         socket.join('global');
 
         socket.on('sendMessage', async (data) => {
-            const { username, content } = data;
+            const { username, content, channel_id } = data;
 
             try {
                 // Lookup correct user_id
@@ -57,9 +57,12 @@ module.exports = (io) => {
                 const realUserId = userRows[0].id;
                 const avatar_url = userRows[0].avatar_url;
 
-                // Save to database
-                const sql = `INSERT INTO messages (user_id, username, content) VALUES (?, ?, ?)`;
-                const result = await db.query(sql, [realUserId, username, content]);
+                // Use channel_id from payload, default to 1 (general) if not provided
+                const targetChannelId = channel_id || 1;
+
+                // Save to database with channel_id
+                const sql = `INSERT INTO messages (user_id, username, content, channel_id) VALUES (?, ?, ?, ?)`;
+                const result = await db.query(sql, [realUserId, username, content, targetChannelId]);
 
                 io.to('global').emit('newMessage', {
                     id: result.id || Date.now(),
@@ -67,6 +70,7 @@ module.exports = (io) => {
                     username,
                     avatar_url, // Include avatar here
                     content,
+                    channel_id: targetChannelId,
                     created_at: new Date().toISOString()
                 });
             } catch (err) {
