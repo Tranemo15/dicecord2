@@ -1,0 +1,88 @@
+:root {
+  --bg-primary: #313338;
+  --bg-secondary: #2b2d31;
+  --bg-tertiary: #1e1f22;
+  --channel-width: 240px;
+  --text-normal: #dbdee1;
+  --text-muted: #949ba4;
+  --accent: #5865F2;
+  --accent-hover: #4752c4;
+  --danger: #da373c;
+  --success: #23a559;
+  --input-bg: #383a40;
+  --chat-bg: #313338;
+
+  /* Modern Radii */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-round: 50%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'gg sans', 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-tertiary);
+  color: var(--text-normal);
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100%;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #2b2d31;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #1a1b1e;
+  border-radius: 4px;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}
+
+.discord-btn {
+  background-color: var(--accent);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 3px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.discord-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.discord-input {
+  background-color: var(--bg-tertiary);
+  border: none;
+  color: var(--text-normal);
+  padding: 10px;
+  border-radius: 3px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+.discord-input:focus {
+  outline: none;
+}

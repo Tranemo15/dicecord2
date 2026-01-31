@@ -1,0 +1,11 @@
+.emoji-picker-container {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 8px;
+    width: 320px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+    overflow: hidden;
+}

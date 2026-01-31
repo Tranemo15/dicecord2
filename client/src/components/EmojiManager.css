@@ -1,0 +1,163 @@
+.emoji-manager-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s;
+}
+
+.emoji-manager-modal {
+    width: 500px;
+    max-height: 80vh;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+.manager-header {
+    padding: 16px 20px;
+    background-color: var(--bg-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.manager-header h3 {
+    margin: 0;
+    color: var(--text-normal);
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: var(--text-normal);
+}
+
+.manager-content {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.upload-section {
+    margin-bottom: 24px;
+    background-color: var(--bg-secondary);
+    padding: 16px;
+    border-radius: 8px;
+}
+
+.upload-section h4,
+.list-section h4 {
+    margin: 0 0 12px 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.manager-upload-form {
+    display: flex;
+    gap: 16px;
+}
+
+.manager-file-input {
+    width: 80px;
+    height: 80px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-size: cover;
+    background-position: center;
+    border: 2px dashed var(--bg-tertiary);
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.manager-file-input:hover {
+    border-color: var(--text-normal);
+    color: var(--text-normal);
+}
+
+.upload-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+}
+
+.upload-fields input {
+    background-color: var(--bg-tertiary);
+    border: 1px solid transparent;
+    padding: 10px;
+    border-radius: 4px;
+    color: var(--text-normal);
+}
+
+.upload-fields input:focus {
+    border-color: #5865F2;
+    outline: none;
+}
+
+.upload-fields button {
+    background-color: #5865F2;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.upload-fields button:hover {
+    background-color: #4752C4;
+}
+
+.manager-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.manager-emoji-item {
+    background-color: var(--bg-secondary);
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.manager-emoji-item img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.manager-emoji-item span {
+    font-size: 10px;
+    color: var(--text-muted);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

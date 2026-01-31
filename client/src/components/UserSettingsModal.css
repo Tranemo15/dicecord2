@@ -1,0 +1,334 @@
+.settings-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(1.05);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.settings-modal {
+    width: 800px;
+    /* Specific width like Discord */
+    height: 600px;
+    background-color: var(--bg-primary);
+    display: flex;
+    border-radius: 5px;
+    /* Subtle radius */
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(32, 34, 37, 0.6), 0 2px 10px 0 rgba(0, 0, 0, 0.2);
+}
+
+.settings-sidebar {
+    width: 218px;
+    background-color: var(--bg-secondary);
+    padding: 60px 6px 60px 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-sidebar-header {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+}
+
+.settings-tab {
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: var(--text-normal);
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 2px;
+}
+
+.settings-tab.active {
+    background-color: rgba(79, 84, 92, 0.6);
+    /* Selected state */
+    color: #fff;
+}
+
+.settings-tab:hover:not(.active) {
+    background-color: rgba(79, 84, 92, 0.32);
+}
+
+.settings-content {
+    flex: 1;
+    /* Take remaining width */
+    padding: 60px 40px;
+    background-color: var(--bg-primary);
+    overflow-y: auto;
+}
+
+.settings-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-normal);
+    margin-bottom: 20px;
+}
+
+/* Profile Section Card */
+.profile-section {
+    background-color: var(--bg-primary);
+}
+
+.profile-banner {
+    height: 120px;
+    background-color: #5865f2;
+    /* Default banner color */
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    transition: background-color 0.2s;
+}
+
+.profile-banner.clickable:hover {
+    opacity: 0.9;
+}
+
+.banner-upload-label {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 6px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.profile-banner:hover .banner-upload-label {
+    opacity: 1;
+}
+
+.bio-section {
+    padding: 16px;
+    background-color: var(--bg-primary);
+    margin-top: 16px;
+    border-radius: 8px;
+}
+
+.bio-section label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.bio-section textarea {
+    width: 100%;
+    height: 100px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 10px;
+    color: var(--text-normal);
+    font-size: 14px;
+    resize: none;
+    font-family: inherit;
+}
+
+.bio-section textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.profile-header {
+    background-color: #202225;
+    /* Darker card bg */
+    padding: 16px;
+    border-radius: 0 0 8px 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.profile-avatar-container {
+    position: absolute;
+    top: -40px;
+    left: 16px;
+    border: 6px solid #202225;
+    /* Match card bg to create cutout effect */
+    border-radius: 50%;
+    background-color: #202225;
+}
+
+.profile-avatar-lg {
+    border-radius: 50%;
+    /* Object fit handled in component */
+}
+
+.profile-username {
+    margin-left: 100px;
+    /* Space for avatar */
+}
+
+.profile-username h3 {
+    font-size: 20px;
+    color: #fff;
+    margin: 0;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.upload-btn {
+    background-color: #5865f2;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 3px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.upload-btn:hover {
+    background-color: #4752c4;
+}
+
+/* Unsaved Changes Bar */
+.unsaved-changes-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    background-color: #18191c;
+    padding: 10px 16px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, 100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+.unsaved-changes-bar span {
+    color: #fff;
+    font-weight: 500;
+}
+
+.unsaved-changes-bar .actions {
+    display: flex;
+    gap: 16px;
+}
+
+.btn-reset {
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-reset:hover {
+    text-decoration: underline;
+}
+
+.btn-save {
+    background-color: #2d7d46;
+    /* Green */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 3px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-save:hover {
+    background-color: #215e34;
+}
+
+.btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Close Button */
+.close-btn-abs {
+    position: absolute;
+    top: 60px;
+    right: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: 2px solid var(--text-muted);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.close-btn-abs:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-normal);
+}
+
+.close-btn-abs span {
+    font-size: 10px;
+    margin-top: 2px;
+    display: none;
+    /* Hide text for cleaner look usually */
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
