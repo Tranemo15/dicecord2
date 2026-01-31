@@ -116,6 +116,10 @@ class Database {
         // Ignore if column already exists
       }
 
+      // FORCE RESET channels table to fix bad schema
+      // TODO: Remove this line after one successful deployment
+      await this.query('DROP TABLE IF EXISTS channels CASCADE');
+
       // Channels table
       await this.query(`
         CREATE TABLE IF NOT EXISTS channels (
