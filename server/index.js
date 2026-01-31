@@ -263,6 +263,10 @@ app.post('/api/channels', verifyToken, async (req, res) => {
     // Simple validation: alphanumeric + dashes
     const safeName = name.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
+    if (!safeName) {
+        return res.status(400).json({ error: 'Channel name must contain at least one alphanumeric character' });
+    }
+
     try {
         const result = await db.query('INSERT INTO channels (name) VALUES (?)', [safeName]);
         // result might differ based on DB adapter, fetching back for consistency
@@ -274,6 +278,10 @@ app.post('/api/channels', verifyToken, async (req, res) => {
 
         res.json(rows[0]);
     } catch (err) {
+        // Check for UNIQUE constraint error
+        if (err.message.includes('UNIQUE constraint failed') || err.message.includes('duplicate key')) {
+            return res.status(400).json({ error: `Channel "${safeName}" already exists` });
+        }
         res.status(500).json({ error: err.message });
     }
 });

@@ -235,6 +235,22 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         e.preventDefault();
         if (!newChannelName.trim()) return;
 
+        // Normalize the name the same way the server does
+        const safeName = newChannelName.toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+        // Check if channel already exists
+        if (channels.some(ch => ch.name === safeName)) {
+            alert(`Channel "${safeName}" already exists!`);
+            setNewChannelName('');
+            setIsCreatingChannel(false);
+            return;
+        }
+
+        if (!safeName) {
+            alert('Channel name must contain at least one alphanumeric character');
+            return;
+        }
+
         try {
             const res = await axios.post(`${API_URL}/api/channels`,
                 { name: newChannelName },
