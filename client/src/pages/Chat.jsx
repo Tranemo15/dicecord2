@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Plus, LogOut, Hash, Send, Smile, X, Settings, ListPlus } from 'lucide-react';
+import { Plus, LogOut, Hash, Send, Smile, X, Settings, ListPlus, Users } from 'lucide-react';
 import EmojiPicker from '../components/EmojiPicker';
 import EmojiManager from '../components/EmojiManager';
 import Avatar from '../components/Avatar';
@@ -19,6 +19,12 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showEmojiManager, setShowEmojiManager] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+    // User Sidebar State
+    const [onlineUsers, setOnlineUsers] = useState([]);
+    const [allUsers, setAllUsers] = useState([]);
+    const [isUserSidebarOpen, setIsUserSidebarOpen] = useState(true);
+
     const [autocompleteList, setAutocompleteList] = useState([]);
     const [autocompleteIndex, setAutocompleteIndex] = useState(0);
     const [lightboxImage, setLightboxImage] = useState(null);
@@ -38,6 +44,15 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         }
     };
 
+    const fetchAllUsers = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/api/users`);
+            setAllUsers(res.data);
+        } catch (err) {
+            console.error("Failed to fetch users", err);
+        }
+    };
+
     useEffect(() => {
         // Initial fetch
         const fetchMessages = async () => {
@@ -51,6 +66,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
 
         fetchMessages();
         fetchEmojis();
+        fetchAllUsers();
 
         // Socket connection
         socket.auth = { token };
@@ -60,8 +76,13 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
             setMessages((prev) => [...prev, msg]);
         });
 
+        socket.on('onlineUsers', (users) => {
+            setOnlineUsers(users);
+        });
+
         return () => {
             socket.off('newMessage');
+            socket.off('onlineUsers');
             socket.disconnect();
         };
     }, [token]);
@@ -210,6 +231,9 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         }
     };
 
+    // Calculate Offline Users
+    const offlineUsers = allUsers.filter(u => !onlineUsers.some(ou => ou.id === u.id));
+
     return (
         <div className="app-container">
             {/* Sidebar */}
@@ -266,6 +290,14 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                     <Hash size={24} className="header-hash" />
                     <h3>general</h3>
                     <span className="topic">The one and only global chat</span>
+                    <button
+                        className={`icon-btn ml-auto ${isUserSidebarOpen ? 'active' : ''}`}
+                        onClick={() => setIsUserSidebarOpen(!isUserSidebarOpen)}
+                        title="Toggle User List"
+                        style={{ marginLeft: 'auto' }}
+                    >
+                        <Users size={24} />
+                    </button>
                 </div>
 
                 <div className="messages-list">
@@ -354,6 +386,38 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* Users Sidebar */}
+            <div className={`users-sidebar ${isUserSidebarOpen ? 'open' : 'closed'}`}>
+                {/* Online Users */}
+                <div className="users-section">
+                    <div className="section-header">ONLINE — {onlineUsers.length}</div>
+                    {onlineUsers.map(u => (
+                        <div key={u.id} className="user-item online">
+                            <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
+                            <div className="user-text">
+                                <span className="username">{u.username}</span>
+                                {/* <span className="status-text">{u.bio || ''}</span> */}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Offline Users */}
+                {offlineUsers.length > 0 && (
+                    <div className="users-section mt-4">
+                        <div className="section-header">OFFLINE — {offlineUsers.length}</div>
+                        {offlineUsers.map(u => (
+                            <div key={u.id} className="user-item offline">
+                                <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
+                                <div className="user-text">
+                                    <span className="username">{u.username}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Lightbox */}

@@ -113,6 +113,16 @@ app.get('/api/user/:username', async (req, res) => {
     }
 });
 
+// Get All Users Route
+app.get('/api/users', async (req, res) => {
+    try {
+        const rows = await db.query('SELECT id, username, avatar_url, bio FROM users ORDER BY username ASC');
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ... (existing routes) ...
 
 // Upload User Avatar Route (Update to return full profile if needed, currently returns just url)

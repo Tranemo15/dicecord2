@@ -496,6 +496,88 @@
     color: white;
 }
 
+
 .avatar-upload-wrapper:hover .avatar-overlay {
     opacity: 1;
+}
+
+/* User Sidebar */
+.users-sidebar {
+    width: 240px;
+    background-color: var(--bg-secondary);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
+    flex-shrink: 0;
+    padding: 24px 16px; 
+}
+
+.users-sidebar.closed {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    border: none;
+}
+
+.users-section {
+    margin-bottom: 24px;
+}
+
+.section-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 0 8px;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.user-item:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-normal);
+}
+
+.user-item .avatar {
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.user-text {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.user-item .username {
+    font-weight: 500;
+    color: var(--text-normal);
+    font-size: 15px;
+}
+
+/* Offline Styling */
+.user-item.offline {
+    opacity: 0.6;
+}
+
+.user-item.offline .username {
+    text-decoration: line-through; /* Gray line over name as requested */
+    color: var(--text-muted);
+}
+
+/* Toggle Button */
+.chat-header .icon-btn.active {
+    color: var(--text-normal);
 }
