@@ -106,6 +106,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     const [activeChannel, setActiveChannel] = useState(null); // { id, name }
     const [isCreatingChannel, setIsCreatingChannel] = useState(false);
     const [newChannelName, setNewChannelName] = useState('');
+    const [showPinnedMessages, setShowPinnedMessages] = useState(false);
 
     useEffect(() => {
         const handleVisibilityChange = () => {
@@ -242,9 +243,17 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
     // Filter messages for rendering (client-side specific safety)
     const displayedMessages = messages.filter(m => m.channel_id === (activeChannel?.id || 1));
 
-
-
-
+    const handlePinMessage = async (messageId) => {
+        try {
+            await axios.post(`${API_URL}/api/messages/${messageId}/pin`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+        } catch (err) {
+            console.error("Failed to pin/unpin message", err);
+            alert("Failed to pin/unpin message: " + (err.response?.data?.error || err.message));
+        }
+    };
 
     const handleDeleteMessage = async (messageId) => {
         if (!confirm('Are you sure you want to delete this message?')) return;
@@ -473,27 +482,28 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                             />
                         </form>
                     )}
-                </div>        </div>
-            <div className="user-profile">
-                {/* ... */}
-                <div className="user-info">
-                    <div className="avatar-upload-wrapper" title="User Settings" onClick={() => setIsSettingsOpen(true)}>
-                        <Avatar username={username} avatarUrl={avatarUrl || null} />
-                        <div className="avatar-overlay">
-                            <Settings size={16} />
+                </div>
+
+                <div className="user-profile">
+                    <div className="user-info">
+                        <div className="avatar-upload-wrapper" title="User Settings" onClick={() => setIsSettingsOpen(true)}>
+                            <Avatar username={username} avatarUrl={avatarUrl || null} />
+                            <div className="avatar-overlay">
+                                <Settings size={16} />
+                            </div>
+                        </div>
+                        <div className="username-tag">
+                            <span className="username">{username}</span>
                         </div>
                     </div>
-                    <div className="username-tag">
-                        <span className="username">{username}</span>
+                    <div className="profile-controls">
+                        <button className="icon-btn" onClick={() => setIsSettingsOpen(true)} title="User Settings">
+                            <Settings size={18} />
+                        </button>
+                        <button className="icon-btn" onClick={logout} title="Logout">
+                            <LogOut size={18} />
+                        </button>
                     </div>
-                </div>
-                <div className="profile-controls">
-                    <button className="icon-btn" onClick={() => setIsSettingsOpen(true)} title="User Settings">
-                        <Settings size={18} />
-                    </button>
-                    <button className="icon-btn" onClick={logout} title="Logout">
-                        <LogOut size={18} />
-                    </button>
                 </div>
             </div>
 
@@ -512,233 +522,232 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                 emojis={emojis}
                 refreshEmojis={fetchEmojis}
             />
-        </div>
 
-            {/* Chat Area */ }
-    <div className="chat-area">
-        <div className="chat-header">
-            <Hash size={24} className="header-hash" />
-            <h3>{activeChannel?.name || 'general'}</h3>
-            <span className="topic">The one and only global chat</span>
+            {/* Chat Area */}
+            <div className="chat-area">
+                <div className="chat-header">
+                    <Hash size={24} className="header-hash" />
+                    <h3>{activeChannel?.name || 'general'}</h3>
+                    <span className="topic">The one and only global chat</span>
 
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                <button
-                    className={`icon-btn ${showPinnedMessages ? 'active' : ''}`}
-                    onClick={() => setShowPinnedMessages(!showPinnedMessages)}
-                    title="Pinned Messages"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pin"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
-                </button>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                        <button
+                            className={`icon-btn ${showPinnedMessages ? 'active' : ''}`}
+                            onClick={() => setShowPinnedMessages(!showPinnedMessages)}
+                            title="Pinned Messages"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pin"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
+                        </button>
 
-                <button
-                    className={`icon-btn ${isUserSidebarOpen ? 'active' : ''}`}
-                    onClick={() => setIsUserSidebarOpen(!isUserSidebarOpen)}
-                    title="Toggle User List"
-                >
-                    <Users size={24} />
-                </button>
-            </div>
-        </div>
-
-        {showPinnedMessages && (
-            <div className="pinned-messages-popout">
-                <div className="pinned-header">
-                    <h3>Pinned Messages</h3>
+                        <button
+                            className={`icon-btn ${isUserSidebarOpen ? 'active' : ''}`}
+                            onClick={() => setIsUserSidebarOpen(!isUserSidebarOpen)}
+                            title="Toggle User List"
+                        >
+                            <Users size={24} />
+                        </button>
+                    </div>
                 </div>
-                <div className="pinned-list">
-                    {messages.filter(m => m.is_pinned).length === 0 ? (
-                        <div className="pinned-empty">No pinned messages yet.</div>
-                    ) : (
-                        messages.filter(m => m.is_pinned).map(msg => (
-                            <div key={msg.id} className="pinned-item">
-                                <div className="pinned-item-header">
-                                    <Avatar username={msg.username} avatarUrl={msg.avatar_url} size={24} />
-                                    <span className="pinned-username">{msg.username}</span>
-                                    <span className="pinned-time">{formatToCET(msg.created_at, 'full')}</span>
-                                </div>
-                                <div className="pinned-content">
-                                    {renderMessageContent(msg.content)}
-                                </div>
-                                <button className="pinned-remove" onClick={() => handlePinMessage(msg.id)} title="Unpin">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-        )}
 
-        <div className="messages-list">
-            {displayedMessages.map((msg, idx) => {
-                const isDifferentUser = idx === 0 || displayedMessages[idx - 1].username !== msg.username;
-
-                return (
-                    <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'}`}>
-                        <div className="message-left-col">
-                            {isDifferentUser ? (
-                                <Avatar
-                                    username={msg.username}
-                                    avatarUrl={msg.avatar_url}
-                                    size={40}
-                                    className="message-avatar"
-                                />
+                {showPinnedMessages && (
+                    <div className="pinned-messages-popout">
+                        <div className="pinned-header">
+                            <h3>Pinned Messages</h3>
+                        </div>
+                        <div className="pinned-list">
+                            {messages.filter(m => m.is_pinned).length === 0 ? (
+                                <div className="pinned-empty">No pinned messages yet.</div>
                             ) : (
-                                <div className="message-timestamp-hover">
-                                    {formatToCET(msg.created_at, 'time')}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="message-right-col">
-                            {isDifferentUser && (
-                                <div className="message-header">
-                                    <span className="message-username">{msg.username}</span>
-                                    <span className="message-time">
-                                        {formatToCET(msg.created_at, 'full')}
-                                    </span>
-                                </div>
-                            )}
-                            <div className="message-content">
-                                {renderMessageContent(msg.content)}
-                            </div>
-                        </div>
-
-                        <div className="message-actions">
-                            <button
-                                className="message-action-btn"
-                                title={msg.is_pinned ? "Unpin Message" : "Pin Message"}
-                                onClick={() => handlePinMessage(msg.id)}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
-                            </button>
-
-                            {msg.username === username && (
-                                <button
-                                    className="message-action-btn delete-btn"
-                                    title="Delete Message"
-                                    onClick={() => handleDeleteMessage(msg.id)}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
-                                </button>
+                                messages.filter(m => m.is_pinned).map(msg => (
+                                    <div key={msg.id} className="pinned-item">
+                                        <div className="pinned-item-header">
+                                            <Avatar username={msg.username} avatarUrl={msg.avatar_url} size={24} />
+                                            <span className="pinned-username">{msg.username}</span>
+                                            <span className="pinned-time">{formatToCET(msg.created_at, 'full')}</span>
+                                        </div>
+                                        <div className="pinned-content">
+                                            {renderMessageContent(msg.content)}
+                                        </div>
+                                        <button className="pinned-remove" onClick={() => handlePinMessage(msg.id)} title="Unpin">
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                ))
                             )}
                         </div>
                     </div>
-                );
-            })}
-            <div ref={messagesEndRef} />
-        </div>
+                )}
 
-        <div className="input-area">
-            {/* ... (input area same as before) ... */}
-            {autocompleteList.length > 0 && (
-                <div className="autocomplete-popup">
-                    {autocompleteList.map((emoji, idx) => (
-                        <div
-                            key={idx}
-                            className={`autocomplete-item ${idx === autocompleteIndex ? 'active' : ''}`}
-                            onClick={() => selectAutocomplete(emoji)}
-                        >
-                            {emoji.type === 'custom' ? (
-                                <img src={`${API_URL}${emoji.url}`} alt={emoji.name} />
-                            ) : (
-                                <span style={{ marginRight: 8, fontSize: 20 }}>{emoji.char}</span>
-                            )}
-                            <span>:{emoji.name}:</span>
+                <div className="messages-list">
+                    {displayedMessages.map((msg, idx) => {
+                        const isDifferentUser = idx === 0 || displayedMessages[idx - 1].username !== msg.username;
+
+                        return (
+                            <div key={msg.id || idx} className={`message-item ${isDifferentUser ? 'message-group-start' : 'message-group-follow'}`}>
+                                <div className="message-left-col">
+                                    {isDifferentUser ? (
+                                        <Avatar
+                                            username={msg.username}
+                                            avatarUrl={msg.avatar_url}
+                                            size={40}
+                                            className="message-avatar"
+                                        />
+                                    ) : (
+                                        <div className="message-timestamp-hover">
+                                            {formatToCET(msg.created_at, 'time')}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="message-right-col">
+                                    {isDifferentUser && (
+                                        <div className="message-header">
+                                            <span className="message-username">{msg.username}</span>
+                                            <span className="message-time">
+                                                {formatToCET(msg.created_at, 'full')}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="message-content">
+                                        {renderMessageContent(msg.content)}
+                                    </div>
+                                </div>
+
+                                <div className="message-actions">
+                                    <button
+                                        className="message-action-btn"
+                                        title={msg.is_pinned ? "Unpin Message" : "Pin Message"}
+                                        onClick={() => handlePinMessage(msg.id)}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="17" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
+                                    </button>
+
+                                    {msg.username === username && (
+                                        <button
+                                            className="message-action-btn delete-btn"
+                                            title="Delete Message"
+                                            onClick={() => handleDeleteMessage(msg.id)}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    <div ref={messagesEndRef} />
+                </div>
+
+                <div className="input-area">
+                    {/* ... (input area same as before) ... */}
+                    {autocompleteList.length > 0 && (
+                        <div className="autocomplete-popup">
+                            {autocompleteList.map((emoji, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`autocomplete-item ${idx === autocompleteIndex ? 'active' : ''}`}
+                                    onClick={() => selectAutocomplete(emoji)}
+                                >
+                                    {emoji.type === 'custom' ? (
+                                        <img src={`${API_URL}${emoji.url}`} alt={emoji.name} />
+                                    ) : (
+                                        <span style={{ marginRight: 8, fontSize: 20 }}>{emoji.char}</span>
+                                    )}
+                                    <span>:{emoji.name}:</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="chat-form-container">
+                        <form className="chat-form" onSubmit={sendMessage}>
+                            <input
+                                type="text"
+                                placeholder={`Message #general`}
+                                value={inputValue}
+                                onChange={handleInputChange}
+                                onKeyDown={handleKeyDown}
+                            />
+                            <div className="chat-form-actions">
+                                <button
+                                    type="button"
+                                    className="emoji-trigger-btn"
+                                    onClick={() => setShowEmojiManager(true)}
+                                    title="Manage Emojis"
+                                >
+                                    <ListPlus size={20} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="emoji-trigger-btn"
+                                    onClick={openEmojiPicker}
+                                    title="Open Emojis"
+                                >
+                                    <Smile size={20} />
+                                </button>
+                            </div>
+                        </form>
+                        {showEmojiPicker && (
+                            <div className="emoji-picker-popup" ref={emojiPickerRef}>
+                                <EmojiPicker
+                                    emojis={emojis}
+                                    onSelect={insertEmoji}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Users Sidebar */}
+            <div className={`users-sidebar ${isUserSidebarOpen ? 'open' : 'closed'}`}>
+                {/* Online Users */}
+                <div className="users-section">
+                    <div className="section-header">ONLINE — {onlineUsers.length}</div>
+                    {onlineUsers.map(u => (
+                        <div key={u.id} className="user-item online">
+                            <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
+                            <div className="user-text">
+                                <span className="username">{u.username}</span>
+                                {/* <span className="status-text">{u.bio || ''}</span> */}
+                            </div>
                         </div>
                     ))}
                 </div>
-            )}
 
-            <div className="chat-form-container">
-                <form className="chat-form" onSubmit={sendMessage}>
-                    <input
-                        type="text"
-                        placeholder={`Message #general`}
-                        value={inputValue}
-                        onChange={handleInputChange}
-                        onKeyDown={handleKeyDown}
-                    />
-                    <div className="chat-form-actions">
-                        <button
-                            type="button"
-                            className="emoji-trigger-btn"
-                            onClick={() => setShowEmojiManager(true)}
-                            title="Manage Emojis"
-                        >
-                            <ListPlus size={20} />
-                        </button>
-                        <button
-                            type="button"
-                            className="emoji-trigger-btn"
-                            onClick={openEmojiPicker}
-                            title="Open Emojis"
-                        >
-                            <Smile size={20} />
-                        </button>
-                    </div>
-                </form>
-                {showEmojiPicker && (
-                    <div className="emoji-picker-popup" ref={emojiPickerRef}>
-                        <EmojiPicker
-                            emojis={emojis}
-                            onSelect={insertEmoji}
-                        />
+                {/* Offline Users */}
+                {offlineUsers.length > 0 && (
+                    <div className="users-section mt-4">
+                        <div className="section-header">OFFLINE — {offlineUsers.length}</div>
+                        {offlineUsers.map(u => (
+                            <div key={u.id} className="user-item offline">
+                                <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
+                                <div className="user-text">
+                                    <span className="username">{u.username}</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
-        </div>
-    </div>
 
-    {/* Users Sidebar */ }
-    <div className={`users-sidebar ${isUserSidebarOpen ? 'open' : 'closed'}`}>
-        {/* Online Users */}
-        <div className="users-section">
-            <div className="section-header">ONLINE — {onlineUsers.length}</div>
-            {onlineUsers.map(u => (
-                <div key={u.id} className="user-item online">
-                    <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
-                    <div className="user-text">
-                        <span className="username">{u.username}</span>
-                        {/* <span className="status-text">{u.bio || ''}</span> */}
-                    </div>
-                </div>
-            ))}
-        </div>
-
-        {/* Offline Users */}
-        {offlineUsers.length > 0 && (
-            <div className="users-section mt-4">
-                <div className="section-header">OFFLINE — {offlineUsers.length}</div>
-                {offlineUsers.map(u => (
-                    <div key={u.id} className="user-item offline">
-                        <Avatar username={u.username} avatarUrl={u.avatar_url} size={32} />
-                        <div className="user-text">
-                            <span className="username">{u.username}</span>
+            {/* Lightbox */}
+            {
+                lightboxImage && (
+                    <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
+                        <div className="lightbox-content" onClick={e => e.stopPropagation()}>
+                            <img src={`${API_URL}${lightboxImage.url}`} alt={lightboxImage.name} />
+                            <div className="lightbox-footer">
+                                <span className="lightbox-name">:{lightboxImage.name}:</span>
+                                <a href={`${API_URL}${lightboxImage.url}`} target="_blank" rel="noopener noreferrer">Open in original</a>
+                            </div>
                         </div>
+                        <button className="lightbox-close" onClick={() => setLightboxImage(null)}>
+                            <X size={24} />
+                        </button>
                     </div>
-                ))}
-            </div>
-        )}
-    </div>
-
-    {/* Lightbox */ }
-    {
-        lightboxImage && (
-            <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
-                <div className="lightbox-content" onClick={e => e.stopPropagation()}>
-                    <img src={`${API_URL}${lightboxImage.url}`} alt={lightboxImage.name} />
-                    <div className="lightbox-footer">
-                        <span className="lightbox-name">:{lightboxImage.name}:</span>
-                        <a href={`${API_URL}${lightboxImage.url}`} target="_blank" rel="noopener noreferrer">Open in original</a>
-                    </div>
-                </div>
-                <button className="lightbox-close" onClick={() => setLightboxImage(null)}>
-                    <X size={24} />
-                </button>
-            </div>
-        )
-    }
-            </div >
-            );
+                )
+            }
+        </div>
+    );
 }
