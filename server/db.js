@@ -123,8 +123,12 @@ class Database {
         )
       `);
 
-      // Add default channel
-      await this.query(`INSERT OR IGNORE INTO channels (id, name) VALUES (1, 'general')`);
+      // Add default channel (compatible with both SQLite and PostgreSQL)
+      if (isPg) {
+        await this.query(`INSERT INTO channels (id, name) VALUES (1, 'general') ON CONFLICT (id) DO NOTHING`);
+      } else {
+        await this.query(`INSERT OR IGNORE INTO channels (id, name) VALUES (1, 'general')`);
+      }
 
       // Add channel_id to messages
       try {
