@@ -351,7 +351,12 @@ const PORT = process.env.PORT || 3000;
 
 // Initialize DB then start server
 db.init().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+    // Only listen if not running on Vercel (Vercel handles the server execution)
+    if (require.main === module) {
+        server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    }
 });
+
+module.exports = app;
