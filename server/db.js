@@ -10,26 +10,65 @@ class Database {
       console.log('DATABASE_URL starts with postgres:', process.env.DATABASE_URL.startsWith('postgres'));
     }
 
-    this.type = (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres')) ? 'postgres' : 'sqlite';
+    // Check for Turso (Cloud SQLite)
+    this.type = (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) ? 'turso' :
+      (process.env.DATABASE_URL && (process.env.DATABASE_URL.startsWith('postgres') || process.env.DATABASE_URL.startsWith('postgresql'))) ? 'postgres' : 'sqlite';
     console.log(`Initializing database adapter for: ${this.type}`);
 
-    if (this.type === 'postgres') {
+    if (this.type === 'turso') {
+      const { createClient } = require('@libsql/client');
+      this.turso = createClient({
+        url: process.env.TURSO_DATABASE_URL,
+        authToken: process.env.TURSO_AUTH_TOKEN,
+      });
+      console.log('Connected to Turso Cloud SQLite.');
+    } else if (this.type === 'postgres') {
       const { Pool } = require('pg');
       this.pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false } // Required for Railway/Heroku
       });
     } else {
-      const dbPath = path.resolve(__dirname, 'chat.db');
+      let dbPath;
+      if (process.env.VERCEL) {
+        // Vercel only allows writing to /tmp
+        dbPath = path.join('/tmp', 'chat.db');
+        console.log('Running on Vercel, using ephemeral DB at:', dbPath);
+      } else {
+        dbPath = path.resolve(__dirname, 'chat.db');
+      }
+
       this.sqlite = new sqlite3.Database(dbPath, (err) => {
         if (err) console.error('Error opening SQLite DB:', err.message);
-        else console.log('Connected to SQLite DB.');
+        else console.log('Connected to SQLite DB at', dbPath);
       });
     }
   }
 
   async query(sql, params = []) {
-    if (this.type === 'postgres') {
+    if (this.type === 'turso') {
+      try {
+        // Turso returns { columns: [], rows: [] } usually, but execute returns ResultSet
+        // We need to normalize the output to be an array of objects like sqlite/pg
+        const result = await this.turso.execute({ sql, args: params });
+
+        // Normalize rows. If using http driver, rows are objects.
+        const rows = result.rows;
+
+        // Also need to support returning { id: lastID } for INSERTs
+        if (sql.trim().toUpperCase().startsWith('INSERT')) {
+          // lastInsertRowid is BigInt, convert to Number
+          return { id: Number(result.lastInsertRowid), changes: result.rowsAffected };
+        }
+        if (sql.trim().toUpperCase().startsWith('UPDATE') || sql.trim().toUpperCase().startsWith('DELETE')) {
+          return { changes: result.rowsAffected };
+        }
+        return rows;
+      } catch (err) {
+        console.error('Turso Query Error:', err);
+        throw err;
+      }
+    } else if (this.type === 'postgres') {
       // Rewrite ? to $1, $2, etc. for Postgres
       let paramIndex = 1;
       const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
@@ -56,7 +95,7 @@ class Database {
 
   async init() {
     // Re-check environment variable to be absolutely sure
-    const isPg = (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres')) || this.type === 'postgres';
+    const isPg = (process.env.DATABASE_URL && (process.env.DATABASE_URL.startsWith('postgres') || process.env.DATABASE_URL.startsWith('postgresql'))) || this.type === 'postgres';
     console.log(`[db.js] init() called. isPg=${isPg}, this.type=${this.type}`);
 
     const idType = isPg ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
