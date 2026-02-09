@@ -66,7 +66,10 @@ export default function Auth({ setAuth }) {
                     <span>{isLogin ? 'Need an account?' : 'Already have an account?'}</span>
                     <span
                         className="link"
-                        onClick={() => setIsLogin(!isLogin)}
+                        onClick={() => {
+                            setIsLogin(!isLogin);
+                            setError('');
+                        }}
                     >
                         {isLogin ? 'Register' : 'Login'}
                     </span>

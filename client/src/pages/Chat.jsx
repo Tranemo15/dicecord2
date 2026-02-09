@@ -150,7 +150,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                 // We can't access activeChannel state reliably inside this callback closure without ref
                 // But for now, let's filter in render or use a functional update trick if needed.
                 // Actually, simplest is to just append all, and let the UI filter.
-                // But that might grow large. 
+                // But that might grow large.
                 // Let's refetch or append if matches.
                 // Wait, we need to know the current active channel ID.
                 return [...prev, msg];
@@ -468,6 +468,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
                 <div className="server-name">My Server</div>
                 <div className="channels-header" style={{ padding: '0 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600' }}>
                     <span>TEXT CHANNELS</span>
+                    <Plus size={16} style={{ cursor: 'pointer' }} onClick={() => setIsCreatingChannel(true)} />
                 </div>
 
                 <div className="channels">
