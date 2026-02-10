@@ -70,7 +70,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
         if (count === 0) {
             link.href = '/vite.svg';
             document.getElementsByTagName('head')[0].appendChild(link);
-            document.title = 'Diskok';
+            document.title = 'Dicecord';
             return;
         }
 
@@ -103,7 +103,7 @@ export default function Chat({ token, username, avatarUrl, setAvatarUrl, logout 
 
             link.href = canvas.toDataURL('image/png');
             document.getElementsByTagName('head')[0].appendChild(link);
-            document.title = `(${count}) Diskok`;
+            document.title = `(${count}) Dicecord`;
         };
     };
 
